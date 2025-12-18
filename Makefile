@@ -2,7 +2,7 @@ APP=$(shell basename $(shell git remote get-url origin))
 REGISTRY=ghcr.io/git-account
 BUILDER_IMAGE ?= quay.io/projectquay/golang:1.24
 BASE_IMAGE ?= scratch
-VERSION=$(shell git describe --tags --abbrev=0)-$(shell git rev-parse --short HEAD)
+VERSION=$(shell git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.0")-$(shell git rev-parse --short HEAD)
 # Determine host OS/ARCH and default TARGETOS/TARGETARCH to them
 HOST_UNAME_S := $(shell uname -s 2>/dev/null || echo Linux)
 HOST_UNAME_M := $(shell uname -m 2>/dev/null || echo x86_64)
