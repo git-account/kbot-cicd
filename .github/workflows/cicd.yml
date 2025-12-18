@@ -60,3 +60,45 @@ jobs:
         git config user.email "github-actions@github.com"
         git commit -am "update version $VERSION"
         git push
+
+    - name: Install k3s
+      run: |
+        curl -sfL https://get.k3s.io | sh -s - --write-kubeconfig-mode 644
+        mkdir -p ~/.kube
+        sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+        sudo chown $USER:$USER ~/.kube/config
+        kubectl wait --for=condition=Ready node --all --timeout=60s
+
+    - name: Install ArgoCD
+      run: |
+        kubectl create namespace argocd || true
+        kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+        kubectl patch configmap argocd-cmd-params-cm -n argocd --type merge -p '{"data":{"server.insecure":"true"}}'
+        kubectl wait --for=condition=available --timeout=300s deployment/argocd-server -n argocd
+
+    - name: Deploy with ArgoCD
+      run: |
+        kubectl create namespace kbot || true
+        cat <<EOF | kubectl apply -f -
+        apiVersion: argoproj.io/v1alpha1
+        kind: Application
+        metadata:
+          name: kbot
+          namespace: argocd
+        spec:
+          project: default
+          source:
+            repoURL: https://github.com/${{ github.repository }}
+            targetRevision: HEAD
+            path: helm
+          destination:
+            server: https://kubernetes.default.svc
+            namespace: kbot
+          syncPolicy:
+            automated:
+              prune: true
+              selfHeal: true
+            syncOptions:
+            - CreateNamespace=true
+        EOF
+        kubectl wait --for=condition=Synced application/kbot -n argocd --timeout=300s || true
