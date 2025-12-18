@@ -10,7 +10,7 @@ image:
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v1.0.0-9aedd46-amd64"
+  tag: "-f2f9f86"
   arch: amd64
 secret:
   name: kbot
